@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Bases de Datos - Diagramas ER y SQL</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --success-color: #27ae60;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 15px 20px;
+        }
+
+        .database-builder {
+            min-height: 500px;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+
+        .entity-card {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .entity-card:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .attribute-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .pk-badge {
+            background: var(--accent-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-left: 8px;
+        }
+
+        .fk-badge {
+            background: var(--success-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-left: 8px;
+        }
+
+        .mermaid-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 500px;
+            overflow: auto;
+            position: relative;
+        }
+
+        .sql-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            min-height: 300px;
+            border-radius: 8px;
+            padding: 15px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .data-type-badge {
+            background: #6c757d;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-color), #2ecc71);
+            border: none;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--accent-color), #e67e22);
+            border: none;
+        }
+
+        .tooltip-icon {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            background: #6c757d;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 18px;
+            font-size: 12px;
+            margin-left: 5px;
+            cursor: help;
+        }
+
+        .foreign-key-config {
+            background: #e8f4fd;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .er-diagram-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+
+        .er-diagram-controls .btn {
+            margin-bottom: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .attribute-edit-item {
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .attribute-edit-item:hover {
+            background: #e9ecef;
+            border-color: #007bff;
+        }
+
+        .entity-actions {
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .entity-card:hover .entity-actions {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid py-4">
+        <div class="row">
+            <!-- Panel de Control -->
+            <div class="col-lg-4">
+                <!-- Entidades -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-table me-2"></i>Entidades
+                            <span class="tooltip-icon" title="Crea y gestiona las tablas de tu base de datos">i</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-primary btn-sm w-100 mb-3" onclick="showEntityModal()">
+                            <i class="fas fa-plus me-2"></i>Nueva Entidad
+                        </button>
+                        <div class="database-builder" id="entities-container">
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-database fa-3x mb-3"></i>
+                                <p>Crea entidades para comenzar</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Relaciones -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-project-diagram me-2"></i>Relaciones
+                            <span class="tooltip-icon" title="Define las relaciones entre tus tablas">i</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-success btn-sm w-100 mb-3" onclick="showRelationshipModal()">
+                            <i class="fas fa-link me-2"></i>Nueva Relación
+                        </button>
+                        <div id="relationships-list">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagrama ER y SQL -->
+            <div class="col-lg-8">
+                <!-- Diagrama ER -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-diagram-project me-2"></i>Diagrama ER
+                            <span class="tooltip-icon" title="Visualización del diagrama Entidad-Relación">i</span>
+                        </h5>
+                        <div>
+                            <button class="btn btn-info btn-sm me-2" onclick="generateERDiagram()">
+                                <i class="fas fa-sync me-2"></i>Actualizar
+                            </button>
+                            <button class="btn btn-outline-dark btn-sm" onclick="exportDiagram()">
+                                <i class="fas fa-download me-2"></i>Exportar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mermaid-container" id="erDiagram">
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-project-diagram fa-3x mb-3"></i>
+                                <p>El diagrama ER se generará automáticamente</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scripts SQL -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-code me-2"></i>Scripts SQL Generados
+                            <span class="tooltip-icon" title="Scripts SQL automáticos basados en tu diseño">i</span>
+                        </h5>
+                        <div>
+                            <button class="btn btn-success btn-sm me-2" onclick="generateSQL()">
+                                <i class="fas fa-sync me-2"></i>Generar SQL
+                            </button>
+                            <button class="btn btn-dark btn-sm" onclick="copySQLToClipboard()">
+                                <i class="fas fa-copy me-2"></i>Copiar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Tipo de Base de Datos:</label>
+                            <select class="form-control" id="dbType" onchange="generateSQL()">
+                                <option value="mysql">MySQL</option>
+                                <option value="postgresql">PostgreSQL</option>
+                                <option value="sqlserver">SQL Server</option>
+                                <option value="sqlite">SQLite</option>
+                            </select>
+                        </div>
+                        <div class="sql-output" id="sqlOutput">
+                            -- Los scripts SQL se generarán aquí
+                            -- Crea entidades y relaciones para ver el código generado
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Entidad -->
+    <div class="modal fade" id="entityModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva Entidad (Tabla)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Nombre de la Entidad *</label>
+                                <input type="text" class="form-control" id="entityName" placeholder="usuarios, productos, pedidos">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Descripción</label>
+                                <textarea class="form-control" id="entityDescription" rows="2" placeholder="Descripción de la tabla..."></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Atributos</label>
+                                <div id="attributesList">
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm w-100 mt-2" onclick="addAttributeField()">
+                                    <i class="fas fa-plus me-2"></i>Agregar Atributo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="addEntity()">Agregar Entidad</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Relación -->
+    <div class="modal fade" id="relationshipModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva Relación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Entidad Origen</label>
+                                <select class="form-control" id="relationshipFrom" onchange="updateRelationshipFields()">
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Campo Origen (FK)</label>
+                                <select class="form-control" id="relationshipFromField">
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Entidad Destino</label>
+                                <select class="form-control" id="relationshipTo" onchange="updateRelationshipFields()">
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Campo Destino (PK)</label>
+                                <select class="form-control" id="relationshipToField">
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tipo de Relación</label>
+                                <select class="form-control" id="relationshipType">
+                                    <option value="1:1">Uno a Uno (1:1)</option>
+                                    <option value="1:N">Uno a Muchos (1:N)</option>
+                                    <option value="N:1">Muchos a Uno (N:1)</option>
+                                    <option value="N:M">Muchos a Muchos (N:M)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Nombre de la Relación</label>
+                                <input type="text" class="form-control" id="relationshipName" placeholder="usuarios_pedidos">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="foreign-key-config" id="foreignKeyConfig">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            La llave foránea se creará automáticamente en la entidad origen referenciando la PK de la entidad destino
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="addRelationship()">Crear Relación</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Variables globales
+let entities = [];
+let relationships = [];
+let attributeCounter = 0;
+let draggedEntity = null;
+let offsetX, offsetY;
+let erDiagramScale = 1;
+
+// Inicializar Mermaid
+mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    securityLevel: 'loose',
+    er: {
+        diagramPadding: 20,
+        layoutDirection: 'TB'
+    }
+});
+
+// Funciones para entidades
+function showEntityModal() {
+    document.getElementById('entityName').value = '';
+    document.getElementById('entityDescription').value = '';
+    document.getElementById('attributesList').innerHTML = '';
+    addAttributeField();
+    new bootstrap.Modal(document.getElementById('entityModal')).show();
+}
+
+function addAttributeField() {
+    attributeCounter++;
+    const attributesList = document.getElementById('attributesList');
+    const attributeDiv = document.createElement('div');
+    attributeDiv.className = 'attribute-field mb-2';
+    attributeDiv.innerHTML = `
+        <div class="row g-2">
+            <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm" placeholder="Nombre" data-attr="name">
+            </div>
+            <div class="col-md-3">
+                <select class="form-control form-control-sm" data-attr="type">
+                    <option value="INT">INT</option>
+                    <option value="VARCHAR(255)">VARCHAR</option>
+                    <option value="TEXT">TEXT</option>
+                    <option value="DATE">DATE</option>
+                    <option value="DATETIME">DATETIME</option>
+                    <option value="DECIMAL(10,2)">DECIMAL</option>
+                    <option value="BOOLEAN">BOOLEAN</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-control form-control-sm" data-attr="key">
+                    <option value="">Normal</option>
+                    <option value="PK">Clave Primaria</option>
+                    <option value="FK">Clave Foránea</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-danger btn-sm w-100" onclick="this.parentElement.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    attributesList.appendChild(attributeDiv);
+}
+
+function addEntity() {
+    const name = document.getElementById('entityName').value;
+    const description = document.getElementById('entityDescription').value;
+
+    if (!name) {
+        alert('Por favor ingresa un nombre para la entidad');
+        return;
+    }
+
+    const attributes = [];
+    const attributeFields = document.querySelectorAll('.attribute-field');
+    let hasPrimaryKey = false;
+
+    attributeFields.forEach(field => {
+        const attrName = field.querySelector('[data-attr="name"]').value;
+        const attrType = field.querySelector('[data-attr="type"]').value;
+        const attrKey = field.querySelector('[data-attr="key"]').value;
+
+        if (attrName) {
+            if (attrKey === 'PK') {
+                if (hasPrimaryKey) {
+                    alert('Solo puede haber una clave primaria por tabla');
+                    return;
+                }
+                hasPrimaryKey = true;
+            }
+
+            attributes.push({
+                name: attrName,
+                type: attrType,
+                key: attrKey
+            });
+        }
+    });
+
+    if (attributes.length === 0) {
+        alert('La entidad debe tener al menos un atributo');
+        return;
+    }
+
+    if (!hasPrimaryKey) {
+        alert('La entidad debe tener al menos una clave primaria');
+        return;
+    }
+
+    const entity = {
+        id: 'entity_' + Date.now(),
+        name: name,
+        description: description,
+        attributes: attributes
+    };
+
+    entities.push(entity);
+    renderEntities();
+    generateERDiagram();
+    generateSQL();
+
+    bootstrap.Modal.getInstance(document.getElementById('entityModal')).hide();
+}
+
+function renderEntities() {
+    const container = document.getElementById('entities-container');
+    container.innerHTML = '';
+    
+    entities.forEach(entity => {
+        const entityCard = document.createElement('div');
+        entityCard.className = 'entity-card';
+        entityCard.setAttribute('data-entity-id', entity.id);
+        
+        entityCard.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="mb-0">${entity.name}</h6>
+                <div class="entity-actions">
+                    <button class="btn btn-sm btn-outline-secondary me-1" onclick="editEntityAttributes('${entity.id}')" title="Editar atributos">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteEntity('${entity.id}')" title="Eliminar entidad">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            ${entity.description ? `<p class="small text-muted mb-2">${entity.description}</p>` : ''}
+            <div class="attributes-list">
+                ${entity.attributes.map(attr => `
+                    <div class="attribute-item">
+                        <span>${attr.name} <span class="data-type-badge">${attr.type}</span></span>
+                        ${attr.key === 'PK' ? '<span class="pk-badge">PK</span>' : ''}
+                        ${attr.key === 'FK' ? '<span class="fk-badge">FK</span>' : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        container.appendChild(entityCard);
+    });
+}
+
+function deleteEntity(entityId) {
+    entities = entities.filter(e => e.id !== entityId);
+    relationships = relationships.filter(r => r.from !== entityId && r.to !== entityId);
+    renderEntities();
+    renderRelationships();
+    generateERDiagram();
+    generateSQL();
+}
+
+// Funciones para relaciones
+function showRelationshipModal() {
+    const fromSelect = document.getElementById('relationshipFrom');
+    const toSelect = document.getElementById('relationshipTo');
+
+    fromSelect.innerHTML = '';
+    toSelect.innerHTML = '';
+
+    entities.forEach(entity => {
+        const option = `<option value="${entity.id}">${entity.name}</option>`;
+        fromSelect.innerHTML += option;
+        toSelect.innerHTML += option;
+    });
+
+    updateRelationshipFields();
+    new bootstrap.Modal(document.getElementById('relationshipModal')).show();
+}
+
+function updateRelationshipFields() {
+    const fromEntityId = document.getElementById('relationshipFrom').value;
+    const toEntityId = document.getElementById('relationshipTo').value;
+
+    const fromFieldSelect = document.getElementById('relationshipFromField');
+    const toFieldSelect = document.getElementById('relationshipToField');
+
+    fromFieldSelect.innerHTML = '';
+    toFieldSelect.innerHTML = '';
+
+    if (fromEntityId) {
+        const fromEntity = entities.find(e => e.id === fromEntityId);
+        fromEntity.attributes.forEach(attr => {
+            if (attr.key !== 'PK') {
+                fromFieldSelect.innerHTML += `<option value="${attr.name}">${attr.name}</option>`;
+            }
+        });
+    }
+
+    if (toEntityId) {
+        const toEntity = entities.find(e => e.id === toEntityId);
+        toEntity.attributes.forEach(attr => {
+            if (attr.key === 'PK') {
+                toFieldSelect.innerHTML += `<option value="${attr.name}">${attr.name}</option>`;
+            }
+        });
+    }
+}
+
+function addRelationship() {
+    const from = document.getElementById('relationshipFrom').value;
+    const to = document.getElementById('relationshipTo').value;
+    const fromField = document.getElementById('relationshipFromField').value;
+    const toField = document.getElementById('relationshipToField').value;
+    const type = document.getElementById('relationshipType').value;
+    const name = document.getElementById('relationshipName').value;
+
+    if (!from || !to || !fromField || !toField) {
+        alert('Completa todos los campos de la relación');
+        return;
+    }
+
+    if (from === to) {
+        alert('No puedes crear una relación de una entidad consigo misma');
+        return;
+    }
+
+    const fromEntity = entities.find(e => e.id === from);
+    const attribute = fromEntity.attributes.find(attr => attr.name === fromField);
+    if (attribute) {
+        attribute.key = 'FK';
+        attribute.references = {
+            table: entities.find(e => e.id === to).name,
+            field: toField
+        };
+    }
+
+    const relationship = {
+        id: 'rel_' + Date.now(),
+        from: from,
+        to: to,
+        fromField: fromField,
+        toField: toField,
+        type: type,
+        name: name || `${entities.find(e => e.id === from).name}_${entities.find(e => e.id === to).name}`
+    };
+
+    relationships.push(relationship);
+    renderEntities();
+    renderRelationships();
+    generateERDiagram();
+    generateSQL();
+
+    bootstrap.Modal.getInstance(document.getElementById('relationshipModal')).hide();
+}
+
+function renderRelationships() {
+    const container = document.getElementById('relationships-list');
+    container.innerHTML = '';
+
+    relationships.forEach(rel => {
+        const fromEntity = entities.find(e => e.id === rel.from);
+        const toEntity = entities.find(e => e.id === rel.to);
+
+        const relDiv = document.createElement('div');
+        relDiv.className = 'relationship-item alert alert-info py-2';
+        relDiv.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>${fromEntity.name}.${rel.fromField}</strong> 
+                    ${getRelationshipSymbol(rel.type)} 
+                    <strong>${toEntity.name}.${rel.toField}</strong>
+                    <br>
+                    <small>${rel.name}</small>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteRelationship('${rel.id}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(relDiv);
+    });
+}
+
+function getRelationshipSymbol(type) {
+    switch (type) {
+        case '1:1': return '←→';
+        case '1:N': return '←-→';
+        case 'N:1': return '→-←';
+        case 'N:M': return '←-→';
+        default: return '--';
+    }
+}
+
+function deleteRelationship(relationshipId) {
+    const relationship = relationships.find(r => r.id === relationshipId);
+
+    if (relationship) {
+        const fromEntity = entities.find(e => e.id === relationship.from);
+        const attribute = fromEntity.attributes.find(attr => attr.name === relationship.fromField);
+        if (attribute && attribute.key === 'FK') {
+            attribute.key = '';
+            delete attribute.references;
+        }
+    }
+
+    relationships = relationships.filter(r => r.id !== relationshipId);
+    renderEntities();
+    renderRelationships();
+    generateERDiagram();
+    generateSQL();
+}
+
+// Funciones para el Diagrama ER Interactivo
+function generateERDiagram() {
+    if (entities.length === 0) {
+        document.getElementById('erDiagram').innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-project-diagram fa-3x mb-3"></i>
+                <p>Agrega entidades para generar el diagrama ER</p>
+            </div>
+        `;
+        return;
+    }
+
+    let mermaidCode = 'erDiagram\n';
+
+    entities.forEach(entity => {
+        mermaidCode += `    ${entity.name} {\n`;
+        entity.attributes.forEach(attr => {
+            let field = `${attr.type} ${attr.name}`;
+            if (attr.key === 'PK') field += ' PK';
+            if (attr.key === 'FK') field += ' FK';
+            mermaidCode += `        ${field}\n`;
+        });
+        mermaidCode += `    }\n`;
+    });
+
+    relationships.forEach(rel => {
+        const fromEntity = entities.find(e => e.id === rel.from);
+        const toEntity = entities.find(e => e.id === rel.to);
+
+        let relSymbol = '';
+        switch (rel.type) {
+            case '1:1': relSymbol = '||--||'; break;
+            case '1:N': relSymbol = '||--o{'; break;
+            case 'N:1': relSymbol = '}o--||'; break;
+            case 'N:M': relSymbol = '}o--o{'; break;
+        }
+
+        mermaidCode += `    ${fromEntity.name} ${relSymbol} ${toEntity.name} : "${rel.name}"\n`;
+    });
+
+    document.getElementById('erDiagram').innerHTML = `<div class="mermaid">${mermaidCode}</div>`;
+    
+    mermaid.init(undefined, document.querySelectorAll('.mermaid')).then(() => {
+        applyERDragStyles();
+        enableERDiagramInteraction();
+    });
+}
+
+function enableERDiagramInteraction() {
+    const erDiagramContainer = document.getElementById('erDiagram');
+    
+    erDiagramContainer.addEventListener('mousedown', (e) => {
+        const entityElement = e.target.closest('.entity-rect, .entityLabel');
+        if (entityElement) {
+            const entityName = findEntityNameFromElement(entityElement);
+            if (entityName) {
+                draggedEntity = entities.find(e => e.name === entityName);
+                if (draggedEntity) {
+                    const rect = entityElement.getBoundingClientRect();
+                    offsetX = e.clientX - rect.left;
+                    offsetY = e.clientY - rect.top;
+                    
+                    document.body.style.cursor = 'grabbing';
+                    erDiagramContainer.style.cursor = 'grabbing';
+                    
+                    e.preventDefault();
+                }
+            }
+        }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (draggedEntity) {
+            const erRect = erDiagramContainer.getBoundingClientRect();
+            const newX = e.clientX - erRect.left - offsetX;
+            const newY = e.clientY - erRect.top - offsetY;
+            
+            draggedEntity.erX = newX;
+            draggedEntity.erY = newY;
+            
+            generateERDiagram();
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (draggedEntity) {
+            draggedEntity = null;
+            document.body.style.cursor = 'default';
+            erDiagramContainer.style.cursor = 'default';
+        }
+    });
+
+    erDiagramContainer.addEventListener('dblclick', (e) => {
+        const entityElement = e.target.closest('.entity-rect, .entityLabel');
+        if (entityElement) {
+            const entityName = findEntityNameFromElement(entityElement);
+            if (entityName) {
+                const entity = entities.find(e => e.name === entityName);
+                if (entity) {
+                    editEntityAttributes(entity.id);
+                }
+            }
+        }
+    });
+}
+
+function findEntityNameFromElement(element) {
+    if (element.classList.contains('entityLabel')) {
+        return element.textContent.trim();
+    }
+    
+    if (element.classList.contains('entity-rect')) {
+        const parent = element.parentElement;
+        const label = parent.querySelector('.entityLabel');
+        return label ? label.textContent.trim() : null;
+    }
+    
+    return null;
+}
+
+function applyERDragStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .mermaid .entity-rect {
+            cursor: grab !important;
+            transition: fill 0.3s ease !important;
+        }
+        
+        .mermaid .entity-rect:hover {
+            fill: #e3f2fd !important;
+            stroke: #2196f3 !important;
+            stroke-width: 2px !important;
+        }
+        
+        .mermaid .entityLabel {
+            cursor: grab !important;
+            user-select: none !important;
+        }
+        
+        .mermaid .entity-rect:active,
+        .mermaid .entityLabel:active {
+            cursor: grabbing !important;
+        }
+        
+        #erDiagram {
+            cursor: default;
+            min-height: 500px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            background: white;
+            position: relative;
+            overflow: auto;
+        }
+    `;
+    
+    if (!document.querySelector('#er-drag-styles')) {
+        style.id = 'er-drag-styles';
+        document.head.appendChild(style);
+    }
+}
+
+function addERDiagramControls() {
+    const erDiagramContainer = document.getElementById('erDiagram');
+    
+    const controlsContainer = document.createElement('div');
+    controlsContainer.className = 'er-diagram-controls';
+    controlsContainer.innerHTML = `
+        <div class="btn-group-vertical">
+            <button class="btn btn-light btn-sm" onclick="autoArrangeDiagram()" title="Reorganizar Automáticamente">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+            <button class="btn btn-light btn-sm" onclick="zoomIn()" title="Zoom In">
+                <i class="fas fa-search-plus"></i>
+            </button>
+            <button class="btn btn-light btn-sm" onclick="zoomOut()" title="Zoom Out">
+                <i class="fas fa-search-minus"></i>
+            </button>
+            <button class="btn btn-light btn-sm" onclick="resetZoom()" title="Reset Zoom">
+                <i class="fas fa-expand-arrows-alt"></i>
+            </button>
+        </div>
+    `;
+    
+    erDiagramContainer.appendChild(controlsContainer);
+}
+
+function autoArrangeDiagram() {
+    entities.forEach(entity => {
+        delete entity.erX;
+        delete entity.erY;
+    });
+    
+    generateERDiagram();
+    showSuccess('Diagrama reorganizado automáticamente');
+}
+
+function enableERDiagramZoom() {
+    const erDiagramContainer = document.getElementById('erDiagram');
+    
+    erDiagramContainer.addEventListener('wheel', (e) => {
+        if (e.ctrlKey) {
+            e.preventDefault();
+            
+            const zoomIntensity = 0.1;
+            const wheel = e.deltaY < 0 ? 1 : -1;
+            
+            erDiagramScale += wheel * zoomIntensity;
+            erDiagramScale = Math.min(Math.max(0.5, erDiagramScale), 3);
+            
+            applyERDiagramZoom();
+        }
+    });
+}
+
+function zoomIn() {
+    erDiagramScale = Math.min(erDiagramScale + 0.1, 3);
+    applyERDiagramZoom();
+}
+
+function zoomOut() {
+    erDiagramScale = Math.max(erDiagramScale - 0.1, 0.5);
+    applyERDiagramZoom();
+}
+
+function resetZoom() {
+    erDiagramScale = 1;
+    applyERDiagramZoom();
+}
+
+function applyERDiagramZoom() {
+    const svgElement = document.querySelector('#erDiagram svg');
+    if (svgElement) {
+        svgElement.style.transform = `scale(${erDiagramScale})`;
+        svgElement.style.transformOrigin = '0 0';
+        svgElement.style.transformBox = 'fill-box';
+    }
+}
+
+// Funciones de edición de entidades
+
+
+function saveEntityChanges(entityId) {
+    const entity = entities.find(e => e.id === entityId);
+    if (!entity) return;
+
+    const newName = document.getElementById('editEntityName').value;
+    const newDescription = document.getElementById('editEntityDescription').value;
+
+    if (!newName) {
+        alert('El nombre de la entidad es obligatorio');
+        return;
+    }
+
+    const attributeItems = document.querySelectorAll('.attribute-edit-item');
+    const newAttributes = [];
+    let hasPrimaryKey = false;
+
+    attributeItems.forEach(item => {
+        const nameInput = item.querySelector('input[type="text"]');
+        const typeSelect = item.querySelector('select:nth-of-type(1)');
+        const keySelect = item.querySelector('select:nth-of-type(2)');
+
+        if (nameInput.value.trim()) {
+            if (keySelect.value === 'PK') {
+                if (hasPrimaryKey) {
+                    alert('Solo puede haber una clave primaria por tabla');
+                    return;
+                }
+                hasPrimaryKey = true;
+            }
+
+            newAttributes.push({
+                name: nameInput.value.trim(),
+                type: typeSelect.value,
+                key: keySelect.value
+            });
+        }
+    });
+
+    if (newAttributes.length === 0) {
+        alert('La entidad debe tener al menos un atributo');
+        return;
+    }
+
+    if (!hasPrimaryKey) {
+        alert('La entidad debe tener al menos una clave primaria');
+        return;
+    }
+
+    entity.name = newName;
+    entity.description = newDescription;
+    entity.attributes = newAttributes;
+
+    renderEntities();
+    generateERDiagram();
+    generateSQL();
+
+    bootstrap.Modal.getInstance(document.querySelector('.modal')).hide();
+    showSuccess('Entidad actualizada correctamente');
+
+
+// Función corregida para guardar cambios de entidad
+function saveEntityChanges(entityId) {
+    const entity = entities.find(e => e.id === entityId);
+    if (!entity) return;
+
+    // Obtener nuevos valores - con verificación de nulidad
+    const editEntityName = document.getElementById('editEntityName');
+    const editEntityDescription = document.getElementById('editEntityDescription');
+    
+    if (!editEntityName) {
+        alert('No se pudo encontrar el campo de nombre de entidad');
+        return;
+    }
+
+    const newName = editEntityName.value;
+    const newDescription = editEntityDescription ? editEntityDescription.value : '';
+
+    if (!newName) {
+        alert('El nombre de la entidad es obligatorio');
+        return;
+    }
+
+    // Actualizar atributos desde el modal con verificación de nulidad
+    const attributeItems = document.querySelectorAll('.attribute-edit-item');
+    const newAttributes = [];
+    let hasPrimaryKey = false;
+
+    attributeItems.forEach(item => {
+        const nameInput = item.querySelector('input[type="text"]');
+        const typeSelect = item.querySelector('select:nth-of-type(1)');
+        const keySelect = item.querySelector('select:nth-of-type(2)');
+
+        // Verificar que todos los elementos existan
+        if (nameInput && typeSelect && keySelect && nameInput.value.trim()) {
+            if (keySelect.value === 'PK') {
+                if (hasPrimaryKey) {
+                    alert('Solo puede haber una clave primaria por tabla');
+                    return;
+                }
+                hasPrimaryKey = true;
+            }
+
+            newAttributes.push({
+                name: nameInput.value.trim(),
+                type: typeSelect.value,
+                key: keySelect.value
+            });
+        }
+    });
+
+    if (newAttributes.length === 0) {
+        alert('La entidad debe tener al menos un atributo');
+        return;
+    }
+
+    if (!hasPrimaryKey) {
+        alert('La entidad debe tener al menos una clave primaria');
+        return;
+    }
+
+    // Actualizar la entidad
+    entity.name = newName;
+    entity.description = newDescription;
+    entity.attributes = newAttributes;
+
+    // Actualizar vistas
+    renderEntities();
+    generateERDiagram();
+    generateSQL();
+
+    // Cerrar modal de forma segura
+    const modal = document.querySelector('.modal.show');
+    if (modal) {
+        const bsModal = bootstrap.Modal.getInstance(modal);
+        if (bsModal) {
+            bsModal.hide();
+        }
+    }
+    
+    showSuccess('Entidad actualizada correctamente');
+}
+
+// Función mejorada para editar atributos de entidad
+function editEntityAttributes(entityId) {
+    const entity = entities.find(e => e.id === entityId);
+    if (!entity) return;
+
+    // Crear modal de edición de entidad con IDs únicos
+    const modalId = 'editEntityModal_' + entityId;
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = modalId;
+    modal.innerHTML = `
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Entidad: ${entity.name}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Nombre de la Entidad *</label>
+                                <input type="text" class="form-control" id="editEntityName_${entityId}" value="${entity.name}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Descripción</label>
+                                <textarea class="form-control" id="editEntityDescription_${entityId}" rows="3">${entity.description || ''}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Atributos</label>
+                        <div id="editAttributesList_${entityId}">
+                            ${entity.attributes.map((attr, index) => `
+                                <div class="attribute-edit-item mb-2 p-2 border rounded">
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-md-4">
+                                            <input type="text" class="form-control form-control-sm" value="${attr.name}" placeholder="Nombre del atributo">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <select class="form-control form-control-sm">
+                                                <option value="INT" ${attr.type === 'INT' ? 'selected' : ''}>INT</option>
+                                                <option value="VARCHAR(255)" ${attr.type === 'VARCHAR(255)' ? 'selected' : ''}>VARCHAR</option>
+                                                <option value="TEXT" ${attr.type === 'TEXT' ? 'selected' : ''}>TEXT</option>
+                                                <option value="DATE" ${attr.type === 'DATE' ? 'selected' : ''}>DATE</option>
+                                                <option value="DATETIME" ${attr.type === 'DATETIME' ? 'selected' : ''}>DATETIME</option>
+                                                <option value="DECIMAL(10,2)" ${attr.type === 'DECIMAL(10,2)' ? 'selected' : ''}>DECIMAL</option>
+                                                <option value="BOOLEAN" ${attr.type === 'BOOLEAN' ? 'selected' : ''}>BOOLEAN</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <select class="form-control form-control-sm">
+                                                <option value="" ${!attr.key ? 'selected' : ''}>Normal</option>
+                                                <option value="PK" ${attr.key === 'PK' ? 'selected' : ''}>Clave Primaria</option>
+                                                <option value="FK" ${attr.key === 'FK' ? 'selected' : ''}>Clave Foránea</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="button" class="btn btn-danger btn-sm w-100" onclick="removeAttributeFromEdit('${entityId}', ${index})">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm w-100 mt-2" onclick="addAttributeToEdit('${entityId}')">
+                            <i class="fas fa-plus me-2"></i>Agregar Atributo
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEntityChanges('${entityId}')">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remover modal existente si hay uno
+    const existingModal = document.getElementById(modalId);
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    modal.addEventListener('hidden.bs.modal', function() {
+        document.body.removeChild(modal);
+    });
+}
+
+// Función mejorada para agregar atributo en el editor
+function addAttributeToEdit(entityId) {
+    const attributesList = document.getElementById(`editAttributesList_${entityId}`);
+    if (!attributesList) {
+        console.error('No se pudo encontrar el contenedor de atributos');
+        return;
+    }
+
+    const newAttributeDiv = document.createElement('div');
+    newAttributeDiv.className = 'attribute-edit-item mb-2 p-2 border rounded';
+    newAttributeDiv.innerHTML = `
+        <div class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm" placeholder="Nombre del atributo">
+            </div>
+            <div class="col-md-3">
+                <select class="form-control form-control-sm">
+                    <option value="INT">INT</option>
+                    <option value="VARCHAR(255)">VARCHAR</option>
+                    <option value="TEXT">TEXT</option>
+                    <option value="DATE">DATE</option>
+                    <option value="DATETIME">DATETIME</option>
+                    <option value="DECIMAL(10,2)">DECIMAL</option>
+                    <option value="BOOLEAN">BOOLEAN</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-control form-control-sm">
+                    <option value="">Normal</option>
+                    <option value="PK">Clave Primaria</option>
+                    <option value="FK">Clave Foránea</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-danger btn-sm w-100" onclick="this.parentElement.parentElement.parentElement.remove()">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    attributesList.appendChild(newAttributeDiv);
+}
+
+// Función mejorada para eliminar atributo en el editor
+function removeAttributeFromEdit(entityId, attributeIndex) {
+    const entity = entities.find(e => e.id === entityId);
+    if (entity && entity.attributes[attributeIndex]) {
+        // Si estamos editando, simplemente recargar el modal
+        const modal = document.querySelector('.modal.show');
+        if (modal) {
+            entity.attributes.splice(attributeIndex, 1);
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) {
+                bsModal.hide();
+            }
+            // Esperar a que el modal se cierre antes de abrir uno nuevo
+            setTimeout(() => {
+                editEntityAttributes(entityId);
+            }, 300);
+        }
+    }
+}
+
+// Función auxiliar para obtener elementos del modal de forma segura
+function getModalElement(entityId, elementType) {
+    const element = document.getElementById(`${elementType}_${entityId}`);
+    if (!element) {
+        console.warn(`Elemento no encontrado: ${elementType}_${entityId}`);
+    }
+    return element;
+}
+
+
+// Funciones SQL
+function generateSQL() {
+    const dbType = document.getElementById('dbType').value;
+    let sql = `-- Script SQL generado automáticamente\n`;
+    sql += `-- Tipo de Base de Datos: ${dbType.toUpperCase()}\n`;
+    sql += `-- Fecha: ${new Date().toLocaleString()}\n\n`;
+
+    if (entities.length === 0) {
+        sql += '-- No hay entidades definidas\n';
+        document.getElementById('sqlOutput').textContent = sql;
+        return;
+    }
+
+    entities.forEach(entity => {
+        sql += `-- Tabla: ${entity.name}\n`;
+        sql += `CREATE TABLE ${entity.name} (\n`;
+
+        const columns = [];
+        const primaryKeys = [];
+
+        entity.attributes.forEach(attr => {
+            let column = `    ${attr.name} ${attr.type}`;
+
+            if (attr.key === 'PK') {
+                if (dbType === 'mysql') {
+                    column += ' PRIMARY KEY AUTO_INCREMENT';
+                } else if (dbType === 'postgresql') {
+                    column += ' SERIAL PRIMARY KEY';
+                } else if (dbType === 'sqlite') {
+                    column += ' PRIMARY KEY';
+                } else {
+                    column += ' PRIMARY KEY';
+                }
+                primaryKeys.push(attr.name);
+            } else {
+                column += ' NOT NULL';
+            }
+
+            columns.push(column);
+        });
+
+        sql += columns.join(',\n');
+
+        const foreignKeys = relationships.filter(rel =>
+            entities.find(e => e.id === rel.from)?.name === entity.name
+        );
+
+        if (foreignKeys.length > 0) {
+            sql += ',\n';
+            foreignKeys.forEach((rel, index) => {
+                const toEntity = entities.find(e => e.id === rel.to);
+                const fromField = rel.fromField;
+                const toField = rel.toField;
+
+                sql += `    FOREIGN KEY (${fromField}) REFERENCES ${toEntity.name}(${toField})`;
+                if (index < foreignKeys.length - 1) sql += ',';
+                sql += '\n';
+            });
+        }
+
+        sql += `);\n\n`;
+    });
+
+    document.getElementById('sqlOutput').textContent = sql;
+}
+
+function copySQLToClipboard() {
+    const sqlOutput = document.getElementById('sqlOutput');
+    navigator.clipboard.writeText(sqlOutput.textContent).then(() => {
+        alert('SQL copiado al portapapeles');
+    });
+}
+
+// Funciones de exportación
+function exportDiagram() {
+    const exportModal = document.createElement('div');
+    exportModal.className = 'modal fade';
+    exportModal.innerHTML = `
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-download me-2"></i>Exportar Diagrama ER
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row text-center">
+                        <div class="col-md-6 mb-3">
+                            <div class="export-option p-3 border rounded" onclick="exportAsPNG()">
+                                <i class="fas fa-image fa-3x text-primary mb-2"></i>
+                                <h6>PNG</h6>
+                                <small class="text-muted">Imagen de alta calidad</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="export-option p-3 border rounded" onclick="exportAsSVG()">
+                                <i class="fas fa-vector-square fa-3x text-success mb-2"></i>
+                                <h6>SVG</h6>
+                                <small class="text-muted">Gráfico vectorial escalable</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="export-option p-3 border rounded" onclick="exportAsPDF()">
+                                <i class="fas fa-file-pdf fa-3x text-danger mb-2"></i>
+                                <h6>PDF</h6>
+                                <small class="text-muted">Documento imprimible</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="export-option p-3 border rounded" onclick="exportAsMermaid()">
+                                <i class="fas fa-code fa-3x text-info mb-2"></i>
+                                <h6>Código Mermaid</h6>
+                                <small class="text-muted">Código fuente del diagrama</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(exportModal);
+    const modal = new bootstrap.Modal(exportModal);
+    modal.show();
+
+    exportModal.addEventListener('hidden.bs.modal', function() {
+        document.body.removeChild(exportModal);
+    });
+}
+
+function exportAsPNG() {
+    const diagramElement = document.querySelector('#erDiagram .mermaid');
+    if (!diagramElement) {
+        alert('No hay diagrama para exportar');
+        return;
+    }
+
+    const loadingAlert = showLoading('Generando imagen PNG...');
+
+    html2canvas(diagramElement, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        logging: false
+    }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `diagrama-er-${getTimestamp()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+
+        loadingAlert.remove();
+        bootstrap.Modal.getInstance(document.querySelector('.modal')).hide();
+        showSuccess('Diagrama exportado como PNG');
+    }).catch(error => {
+        console.error('Error al exportar PNG:', error);
+        loadingAlert.remove();
+        alert('Error al exportar el diagrama como PNG');
+    });
+}
+
+function exportAsSVG() {
+    const svgElement = document.querySelector('#erDiagram .mermaid svg');
+    if (!svgElement) {
+        alert('No hay diagrama SVG para exportar');
+        return;
+    }
+
+    try {
+        const clonedSvg = svgElement.cloneNode(true);
+        clonedSvg.style.backgroundColor = '#ffffff';
+
+        const serializer = new XMLSerializer();
+        let svgString = serializer.serializeToString(clonedSvg);
+        svgString = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n' + svgString;
+
+        const blob = new Blob([svgString], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.download = `diagrama-er-${getTimestamp()}.svg`;
+        link.href = url;
+        link.click();
+
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+        bootstrap.Modal.getInstance(document.querySelector('.modal')).hide();
+        showSuccess('Diagrama exportado como SVG');
+    } catch (error) {
+        console.error('Error al exportar SVG:', error);
+        alert('Error al exportar el diagrama como SVG');
+    }
+}
+
+function exportAsPDF() {
+    const diagramElement = document.querySelector('#erDiagram .mermaid');
+    if (!diagramElement) {
+        alert('No hay diagrama para exportar');
+        return;
+    }
+
+    const loadingAlert = showLoading('Generando PDF...');
+
+    html2canvas(diagramElement, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        logging: false
+    }).then(canvas => {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a4'
+        });
+
+        const imgWidth = 280;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const imgData = canvas.toDataURL('image/png');
+
+        pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+        pdf.setFontSize(16);
+        pdf.text('Diagrama ER - Generado Automáticamente', 10, 5);
+        pdf.setFontSize(10);
+        pdf.text(`Generado el: ${new Date().toLocaleDateString()}`, 10, pdf.internal.pageSize.height - 10);
+
+        pdf.save(`diagrama-er-${getTimestamp()}.pdf`);
+
+        loadingAlert.remove();
+        bootstrap.Modal.getInstance(document.querySelector('.modal')).hide();
+        showSuccess('Diagrama exportado como PDF');
+    }).catch(error => {
+        console.error('Error al exportar PDF:', error);
+        loadingAlert.remove();
+        alert('Error al exportar el diagrama como PDF');
+    });
+}
+
+function exportAsMermaid() {
+    const mermaidCode = generateMermaidCode();
+    if (!mermaidCode) {
+        alert('No hay código Mermaid para exportar');
+        return;
+    }
+
+    const exportText = `
+Diagrama ER - Código Mermaid
+Generado: ${new Date().toLocaleString()}
+
+${mermaidCode}
+
+---
+Generado con Generador de Bases de Datos
+    `.trim();
+
+    const blob = new Blob([exportText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.download = `diagrama-er-${getTimestamp()}.mmd`;
+    link.href = url;
+    link.click();
+
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+    bootstrap.Modal.getInstance(document.querySelector('.modal')).hide();
+    showSuccess('Código Mermaid exportado');
+}
+
+function generateMermaidCode() {
+    if (entities.length === 0) return null;
+
+    let mermaidCode = 'erDiagram\n';
+
+    entities.forEach(entity => {
+        mermaidCode += `    ${entity.name} {\n`;
+        entity.attributes.forEach(attr => {
+                        let field = `${attr.type} ${attr.name}`;
+            if (attr.key === 'PK') field += ' PK';
+            if (attr.key === 'FK') field += ' FK';
+            mermaidCode += `        ${field}\n`;
+        });
+        mermaidCode += `    }\n`;
+    });
+
+    relationships.forEach(rel => {
+        const fromEntity = entities.find(e => e.id === rel.from);
+        const toEntity = entities.find(e => e.id === rel.to);
+
+        let relSymbol = '';
+        switch (rel.type) {
+            case '1:1': relSymbol = '||--||'; break;
+            case '1:N': relSymbol = '||--o{'; break;
+            case 'N:1': relSymbol = '}o--||'; break;
+            case 'N:M': relSymbol = '}o--o{'; break;
+        }
+
+        mermaidCode += `    ${fromEntity.name} ${relSymbol} ${toEntity.name} : "${rel.name}"\n`;
+    });
+
+    return mermaidCode;
+}
+
+// Funciones de utilidad
+function getTimestamp() {
+    const now = new Date();
+    return now.toISOString().slice(0, 19).replace(/[:.]/g, '-');
+}
+
+function showLoading(message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-info position-fixed top-50 start-50 translate-middle';
+    alertDiv.style.zIndex = '9999';
+    alertDiv.innerHTML = `
+        <div class="d-flex align-items-center">
+            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+            <span>${message}</span>
+        </div>
+    `;
+    document.body.appendChild(alertDiv);
+    return alertDiv;
+}
+
+function showSuccess(message) {
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3';
+    toast.style.zIndex = '9999';
+    toast.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>${message}
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+// Agregar estilos CSS para las opciones de exportación
+const exportStyles = `
+.export-option {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.export-option:hover {
+    border-color: #007bff !important;
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+`;
+
+const styleSheet = document.createElement('style');
+styleSheet.textContent = exportStyles;
+document.head.appendChild(styleSheet);
+
+// Inicialización
+document.addEventListener('DOMContentLoaded', function() {
+    addERDiagramControls();
+    enableERDiagramZoom();
+    
+    // Aplicar estilos adicionales
+    const additionalStyles = `
+        .attribute-edit-item {
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .attribute-edit-item:hover {
+            background: #e9ecef;
+            border-color: #007bff;
+        }
+        
+        .entity-actions {
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+        
+        .entity-card:hover .entity-actions {
+            opacity: 1;
+        }
+        
+        .er-diagram-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+        
+        .er-diagram-controls .btn {
+            margin-bottom: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+    `;
+    
+    const additionalStyleSheet = document.createElement('style');
+    additionalStyleSheet.textContent = additionalStyles;
+    document.head.appendChild(additionalStyleSheet);
+});
+
+// Función para limpiar todos los datos
+function clearAllData() {
+    if (confirm('¿Estás seguro de que quieres eliminar todas las entidades y relaciones?')) {
+        entities = [];
+        relationships = [];
+        renderEntities();
+        renderRelationships();
+        generateERDiagram();
+        generateSQL();
+        showSuccess('Todos los datos han sido eliminados');
+    }
+}
+
+// Función para cargar datos de ejemplo
+function loadSampleData() {
+    entities = [
+        {
+            id: 'entity_1',
+            name: 'usuarios',
+            description: 'Tabla de usuarios del sistema',
+            attributes: [
+                { name: 'id', type: 'INT', key: 'PK' },
+                { name: 'nombre', type: 'VARCHAR(255)', key: '' },
+                { name: 'email', type: 'VARCHAR(255)', key: '' },
+                { name: 'fecha_creacion', type: 'DATETIME', key: '' }
+            ]
+        },
+        {
+            id: 'entity_2',
+            name: 'productos',
+            description: 'Tabla de productos',
+            attributes: [
+                { name: 'id', type: 'INT', key: 'PK' },
+                { name: 'nombre', type: 'VARCHAR(255)', key: '' },
+                { name: 'precio', type: 'DECIMAL(10,2)', key: '' },
+                { name: 'stock', type: 'INT', key: '' }
+            ]
+        },
+        {
+            id: 'entity_3',
+            name: 'pedidos',
+            description: 'Tabla de pedidos',
+            attributes: [
+                { name: 'id', type: 'INT', key: 'PK' },
+                { name: 'usuario_id', type: 'INT', key: 'FK' },
+                { name: 'fecha_pedido', type: 'DATETIME', key: '' },
+                { name: 'total', type: 'DECIMAL(10,2)', key: '' }
+            ]
+        }
+    ];
+
+    relationships = [
+        {
+            id: 'rel_1',
+            from: 'entity_3',
+            to: 'entity_1',
+            fromField: 'usuario_id',
+            toField: 'id',
+            type: 'N:1',
+            name: 'usuario_pedido'
+        }
+    ];
+
+    renderEntities();
+    renderRelationships();
+    generateERDiagram();
+    generateSQL();
+    showSuccess('Datos de ejemplo cargados');
+}
+
+// Función para importar desde JSON
+function importFromJSON() {
+    const jsonInput = prompt('Pega tu JSON aquí:');
+    if (!jsonInput) return;
+
+    try {
+        const data = JSON.parse(jsonInput);
+        
+        if (data.entities) {
+            entities = data.entities;
+        }
+        if (data.relationships) {
+            relationships = data.relationships;
+        }
+
+        renderEntities();
+        renderRelationships();
+        generateERDiagram();
+        generateSQL();
+        showSuccess('Datos importados correctamente');
+    } catch (error) {
+        alert('Error al importar JSON: ' + error.message);
+    }
+}
+
+// Función para exportar a JSON
+function exportToJSON() {
+    const data = {
+        entities: entities,
+        relationships: relationships,
+        exportDate: new Date().toISOString()
+    };
+
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.download = `base-datos-${getTimestamp()}.json`;
+    link.href = url;
+    link.click();
+
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+    showSuccess('Datos exportados como JSON');
+}
+
+// Agregar botones adicionales al HTML (debes agregarlos en tu HTML)
+function addUtilityButtons() {
+    const sqlCard = document.querySelector('.card .card-header');
+    if (sqlCard) {
+        const buttonGroup = sqlCard.querySelector('div');
+        if (buttonGroup) {
+            buttonGroup.innerHTML += `
+                <button class="btn btn-warning btn-sm me-2" onclick="loadSampleData()" title="Cargar datos de ejemplo">
+                    <i class="fas fa-database me-2"></i>Ejemplo
+                </button>
+                <button class="btn btn-info btn-sm me-2" onclick="importFromJSON()" title="Importar desde JSON">
+                    <i class="fas fa-upload me-2"></i>Importar
+                </button>
+                <button class="btn btn-secondary btn-sm me-2" onclick="exportToJSON()" title="Exportar a JSON">
+                    <i class="fas fa-download me-2"></i>Exportar JSON
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="clearAllData()" title="Limpiar todo">
+                    <i class="fas fa-broom me-2"></i>Limpiar
+                </button>
+            `;
+        }
+    }
+}
+
+// Llamar a la función para agregar botones cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    addUtilityButtons();
+});
+    </script>
+</body>
+</html>
